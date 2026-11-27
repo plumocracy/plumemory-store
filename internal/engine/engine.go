@@ -12,7 +12,13 @@ import (
 // except for in instances where a read and write of the same value occur at the same time across different
 // go routines. Is the write lock enough?
 // 2: Is data[any]any efficient enough? Should I be doing more manual memory management?
-// 3: I need to add a delete method.
+
+const (
+	MissingKeyMsg = "provided key has no value"
+	NilKeyMsg     = "key must not be nil"
+	FuncKeyMsg    = "kust must not be of type func"
+	ChanKeyMsg    = "kust must not be of type chan"
+)
 
 type Engine struct {
 	mtx  sync.Mutex
@@ -41,7 +47,7 @@ func (e *Engine) Store(key any, value any) error {
 	return nil
 }
 
-func (e *Engine) Get(key any) (any, error) {
+func (e *Engine) Read(key any) (any, error) {
 	err := isInterfaceAnyValidType(key)
 	if err != nil {
 		return nil, err
@@ -49,30 +55,47 @@ func (e *Engine) Get(key any) (any, error) {
 
 	v, ok := e.data[key]
 	if !ok {
-		return nil, errors.New("Provided key has no stored value.")
+		return nil, errors.New(MissingKeyMsg)
 	}
 
 	return v, nil
 }
 
+func (e *Engine) Delete(key any) error {
+	err := isInterfaceAnyValidType(key)
+	if err != nil {
+		return err
+	}
+
+	e.mtx.Lock()
+	defer e.mtx.Unlock()
+	_, ok := e.data[key]
+	if ok {
+		delete(e.data, key)
+		return nil
+	} else {
+		return errors.New(NilKeyMsg)
+	}
+}
+
 func isInterfaceAnyValidType(i interface{}) error {
 	if i == nil {
-		return errors.New("Key must not be nil.")
+		return errors.New(NilKeyMsg)
 	}
 
 	v := reflect.ValueOf(i)
 
 	switch v.Kind() {
 	case reflect.Chan:
-		return errors.New("Type chan cannot be a key.")
+		return errors.New(ChanKeyMsg)
 	case reflect.Func:
-		return errors.New("Type func cannot be a key.")
+		return errors.New(FuncKeyMsg)
 	case reflect.Ptr, reflect.Map, reflect.Slice,
 		reflect.Interface, reflect.UnsafePointer:
 		if !v.IsNil() {
 			return nil
 		} else {
-			return errors.New("Key must not be nil.")
+			return errors.New(NilKeyMsg)
 		}
 	}
 

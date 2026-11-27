@@ -10,20 +10,20 @@ func TestIsInterfaceAnyValidType(t *testing.T) {
 	var err error
 
 	err = isInterfaceAnyValidType(nil)
-	assert.Error(t, err)
+	assert.EqualError(t, err, NilKeyMsg)
 	err = nil
 
 	ch := make(chan string)
 	err = isInterfaceAnyValidType(ch)
-	assert.Error(t, err)
+	assert.EqualError(t, err, ChanKeyMsg)
 
 	var p *int
 	err = isInterfaceAnyValidType(p)
-	assert.Error(t, err)
+	assert.EqualError(t, err, NilKeyMsg)
 
 	err = nil
 	err = isInterfaceAnyValidType(func() {})
-	assert.Error(t, err)
+	assert.EqualError(t, err, FuncKeyMsg)
 
 	err = isInterfaceAnyValidType("test")
 	assert.NoError(t, err)
@@ -39,10 +39,24 @@ func TestIsInterfaceAnyValidType(t *testing.T) {
 func TestStoreAndRetrieveData(t *testing.T) {
 	e := New()
 	e.Store("name", "plum")
-	name, err := e.Get("name")
+	name, err := e.Read("name")
 	assert.NoError(t, err)
 	assert.Equal(t, "plum", name)
 
-	name, err = e.Get("fart")
-	assert.Error(t, err)
+	name, err = e.Read("fart")
+	assert.EqualError(t, err, MissingKeyMsg)
+}
+
+func TestDeleteData(t *testing.T) {
+	e := New()
+	e.Store("name", "plum")
+	name, err := e.Read("name")
+	assert.NoError(t, err)
+	assert.Equal(t, "plum", name)
+
+	err = e.Delete("name")
+	assert.NoError(t, err)
+
+	_, err = e.Read("name")
+	assert.EqualError(t, err, MissingKeyMsg)
 }
