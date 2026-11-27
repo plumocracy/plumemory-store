@@ -74,7 +74,7 @@ func (e *Engine) Delete(key any) error {
 		delete(e.data, key)
 		return nil
 	} else {
-		return errors.New(NilKeyMsg)
+		return errors.New(MissingKeyMsg)
 	}
 }
 
